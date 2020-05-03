@@ -5,14 +5,23 @@ const express = require('express');
 //use body-parser Module
 const bodyparser = require('body-parser');
 //use cors module to listen from other port
-var cors = require('cors')
+var cors = require('cors');
+//use multer to handle files
+var multer = require('multer');
+//use http for prtocol
+const https = require('https');
+//use csvjson to convert CSV file to JSON
+const csvjson = require('csvjson');
+//use file System for read and write files
+const readFile = require('fs').readFile;
+//use date to get cuurent date and time
+const date = require('date-and-time');
 
 //intialize
 var app = express();
 
 //Configuring express server
 app.use(bodyparser.json());
-
 
 //MySQL details
 var mysqlConnection = mysql.createConnection({
@@ -37,44 +46,73 @@ app.use(cors())
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log(`Listening on port ${port}..`));
 
+//Create a multer instance and set the destination folder. The code below uses C2C/Controller and Model folder.
+var storage = multer.diskStorage({
+      destination: function (req, file, cb) {
+      cb(null, 'C2C/Controller and Model')
+    },
+    filename: function (req, file, cb) {
+      cb(null, Date.now() + '-' +file.originalname )
+    }
+})
 
-//Creating GET Router to fetch all the user details from the MySQL Database
-app.get('/users' , (req, res) => {
-mysqlConnection.query('SELECT * FROM Locusnine.User', (err, rows, fields) => {
-	if (!err)
-	res.send(rows);
-	else
-	console.log(err);
-	})
+//Create an upload instance and receive a single file
+var upload = multer({ storage: storage }).single('file')
+
+//Set up the post route
+app.post('/upload',function(req, res) {     
+    upload(req, res, function (err) {
+           if (err instanceof multer.MulterError) {
+               return res.status(500).json(err)
+           } else if (err) {
+               return res.status(500).json(err)
+           }
+      return res.status(200).send(req.file)
+    })
 });
 
-//route for insert data
-app.post('/add',(req, res) => {
-  let data = {User_name: req.body.User_name, User_email: req.body.User_email};
-  let sql = "INSERT INTO Locusnine.User SET ?";
-  let query = mysqlConnection.query(sql, data,(err, results) => {
-    if(err) throw err;
-    res.redirect('/');
+//create an object for date and time
+const now = new Date();
+date.format(now, 'YYYY/MM/DD HH:mm:ss');
+
+//once file get upload convert it into JSON
+readFile('./Test_currency.csv', 'utf-8', (err, fileContent) => {
+    if(err) {
+        console.log('Fail to convert into JSON' + err); 
+        throw new Error(err.status(500));
+    }
+    const jsonObj = csvjson.toObject(fileContent);
+    //used an external API to fetch JSON value for todays's INR to USD conversion rate
+    let req = https.get("https://free.currconv.com/api/v7/convert?q=INR_USD&compact=ultra&apiKey=18936862cff4fc21990f", function(res) {
+    let data = '',
+      json_data;
+
+    res.on('data', function(stream) {
+      data += stream;
+    });
+    res.on('end', function() {
+      json_data = JSON.parse(data);
+      //logic for our JSON file and fetched JSON file to calculate INR to USD value
+      for(i in jsonObj){
+        var INRS =  jsonObj[i].INR;
+        var USDs = INRS * json_data.INR_USD;
+        jsonObj[i].USD = USDs; 
+        jsonObj[i].CR =  json_data.INR_USD;
+        jsonObj[i].Datetime = now;   
+      }
+      
+      app.get('/result' , (req, res) => {
+          res.send(jsonObj);
+      });
+      
+    });
+  });
+
+  req.on('error', function(e) {
+      console.log(e.message);
   });
 });
 
-//route for update data
-app.post('/update',(req, res) => {
-  let sql = "UPDATE Locusnine.User SET User_name='"+req.body.User_name+"', User_email='"+req.body.product_price+"' WHERE User_id="+req.body.id;
-  let query = mysqlConnection.query(sql, (err, results) => {
-    if(err) throw err;
-    res.redirect('/');
-  });
-});
- 
-//route for delete data
-app.post('/delete',(req, res) => {
-  let sql = "DELETE FROM Locusnine.User WHERE User_id="+req.body.User_id+"";
-  let query = mysqlConnection.query(sql, (err, results) => {
-    if(err) throw err;
-      res.redirect('/');
-  });
-});
 
 
 

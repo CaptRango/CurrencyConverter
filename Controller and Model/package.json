@@ -1,7 +1,7 @@
 {
   "name": "model",
   "version": "1.0.0",
-  "description": "Model for exctracting data from Database. Technology used is Node.js. We are performing CRUD operations in User Table using this model.",
+  "description": " We are Converting currency using Currency Conversion application.Model for exctracting data from Database. Technology used is Node.js. We are performing CRUD operations in Currency Converte Table using this model.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,13 +9,20 @@
   "author": "Saurabh",
   "license": "ISC",
   "dependencies": {
+    "bluebird": "^3.7.2",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
+    "csvjson": "^5.1.0",
+    "date-and-time": "^0.13.1",
     "express": "^4.17.1",
     "express-handlebars": "^4.0.2",
-    "mysql": "^2.18.1"
+    "get-exchange-rates-usd": "^1.0.0",
+    "multer": "^1.4.2",
+    "mysql": "^2.18.1",
+    "nodejs-currency-converter": "^1.0.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.2"
-  }
+  },
+  "keywords": []
 }
